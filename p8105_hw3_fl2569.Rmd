@@ -2,10 +2,10 @@
 title: "p8105_hw3_fl2569"
 author: "Fang Liu"
 date: "10/15/2021"
-output: html_document
+output: github_document
 ---
 
-```{r set_up}
+```{r set_up, message = FALSE}
 #tidyverse pacakge (dplyr, ggplot2, etc)
 library(tidyverse)
 
@@ -31,18 +31,51 @@ scale_fill_discrete = scale_fill_viridis_d
 ## Problem 1
 This problem uses the Instacart (dataset_instacart.html) data. 
 
+```{r load_data}
+library(p8105.datasets)
+data(instacart)
+```
+
 Write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illustrative examples of observations. 
+```{r description, eval=FALSE}
+str(instacart)
+head(instacart)
+summary(instacart)
+```
+The `instacart` dataset has `r nrow(instacart)` rows and `r ncol(instacart)` columns/variables. Key variables include: order_id, product_id, user_id, days since the last order, product_name, and the department and isle of that product. 
 
-How many aisles are there, and which aisles are the most items ordered from?
+> How many aisles are there, and which aisles are the most items ordered from?
+```{r aisles_data, eval=FALSE}
+instacart %>% 
+  distinct(aisle_id) #134 distinct aisle ID's 
 
-Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more
-than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+aisle_rank =
+  instacart %>% 
+  janitor::tabyl(aisle) %>% 
+  select(aisle, n) %>% 
+  arrange(desc(n)) #134 aisles 
 
-Make a table showing the three most popular items in each of the aisles “baking ingredients”,
-“dog food care”, and “packaged vegetables fruits”. Include the number of times each item is
-ordered in your table.
+#1,384,617 observations 
+```
+There are 134 distinct aisles and most items are ordered from the fresh vegetables(150,609), fresh fruits (150,473), and packaged vegetables fruits (78,493) section. 
 
-Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream
+> Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+```{r}
+instacart %>% 
+  group_by(aisle) %>% 
+  summarise(
+    nobs = n()
+  ) %>% 
+  filter(nobs > 10000) %>% 
+  mutate(aisle = fct_reorder(aisle, nobs)) %>% 
+  ggplot(aes(x = aisle, y = nobs)) +
+  geom_bar(stat = "identity") + 
+  coord_flip() 
+```
+
+* Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+
+* Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream
 are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7
 table).
 
