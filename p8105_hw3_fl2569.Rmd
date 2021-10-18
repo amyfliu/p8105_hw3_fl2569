@@ -73,33 +73,117 @@ instacart %>%
   geom_bar(stat = "identity") + 
   coord_flip() 
 ```
+From the above plot, we see that most of the items ordered are from the fresh vegetables, fresh fruits, and packaged vegetables fruits aisle. 
+
 
 > Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
 
 ```{r popular_item}
-
-test =
+popular_items =
 instacart %>% 
+  drop_na() %>% 
   filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
   group_by(aisle) %>% 
-  janitor::tabyl(aisle, product_name) %>%  #creates a 2-way frequency table 
+  count(product_name, name = 'product_count') %>% 
+  mutate(
+    product_rank = min_rank(desc(product_count))
+  ) %>% 
+  filter(product_rank <= 3) %>% 
+  arrange(product_rank, .by_group = TRUE) %>% 
+  select(-product_rank) %>% 
+  knitr::kable() 
 
+popular_items
 ```
+From the table, we see that the top 3 items ordered from the "baking ingredients" aisle is light brown sugar, pure baking soda, and cane sugar. The top 3 items from the "dog food care" aisle are snack sticks chicken & rice, organic chicken & brown rice, and small dog biscuits. The top 3 items from the "packaged vegetables fruits" aisle are organic baby spinach, organic raspberries, and organic blueberries. 
 
 
-> Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+> Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week
 
 ```{r order_time}
-test2 =
+order_time =
 instacart %>% 
-  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
-  group_by(product_name, order_dow) %>% 
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>%
+  group_by(product_name, order_dow) %>%
+  mutate(
+    order_dow = case_when(
+      order_dow == 0 ~ "Sunday",
+      order_dow == 1 ~ "Monday",
+      order_dow == 2 ~ "Tuesday",
+      order_dow == 3 ~ "Wednesday",
+      order_dow == 4 ~ "Thursday",
+      order_dow == 5 ~ "Friday",
+      order_dow == 6 ~ "Saturday",
+      TRUE ~ "other"
+    )
+  ) %>% 
   summarize(mean_hour = mean(order_hour_of_day)) %>% 
   pivot_wider(names_from = order_dow,
-              values_from = mean_hour)
+              values_from = mean_hour) %>% 
+  select(product_name, Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday) %>% 
+  knitr::kable()
+
+order_time
 ```
+We can see from the table that both pink lady apples and the coffee ice cream are usually ordered around noon to early afternoon(i.e., 11am to 3pm). 
 
 
 ## Problem 2
+This problem uses the BRFSS data. Load the data from the `p8105.datasets` package.First, do some data cleaning:
 
-## Problem 3
+* format the data to use appropriate variable names  
+* focus on the “Overall Health” topic  
+* include only responses from “Excellent” to “Poor”  
+* organize responses as a factor taking levels ordered from “Poor” to “Excellent”  
+
+```{r load_data2}
+data("brfss_smart2010")
+
+brfss_df = 
+  brfss_smart2010 %>% 
+  janitor::clean_names() %>%
+  filter(topic == "Overall Health") %>% 
+  mutate(response = factor(response))
+
+brfss_df
+  #filter(response %in% c("Poor", "Fair", "Good", "Very good", "Excellent")) 
+```
+
+
+> In 2002, which states were observed at 7 or more locations? What about in 2010?
+
+```{r states}
+#2002 
+brfss_df %>%
+  filter(year == 2002) %>% 
+  rename(state = locationabbr) %>% 
+  group_by(state) %>% 
+  summarize(num_location = length(unique(locationdesc))) %>% 
+  filter(num_location >= 7)
+
+#2010
+brfss_df %>%
+  filter(year == 2010) %>% 
+  rename(state = locationabbr) %>% 
+  group_by(state) %>% 
+  summarize(num_location = length(unique(locationdesc))) %>% 
+  filter(num_location >= 7)
+```
+In 2002, only **6** states are observed at 7 or more locations (i.e., CT, FL, MA, NC, NJ, PA). By 2010, **14** states are observed at 7 or more locations.
+
+
+> Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. 
+
+```{r }
+new_brfss_df =
+brfss_df %>% 
+  filter(response == "Excellent") %>% 
+  rename(state = locationabbr) %>% 
+  group_by(state, year) %>% 
+  summarize(mean_value = mean(data_value)) %>% 
+  select(year, state, mean_value)
+
+new_brfss_df
+```
+
+NOTE: this give us the average % of respondents in a state who report having "excellent" general health from 2002 to 2010.
