@@ -6,8 +6,9 @@ output: github_document
 ---
 
 ```{r set_up, message = FALSE}
-#tidyverse pacakge (dplyr, ggplot2, etc)
 library(tidyverse)
+library(gridExtra)
+library(readr)
 
 #figure size options
 knitr::opts_chunk$set(
@@ -29,7 +30,7 @@ scale_fill_discrete = scale_fill_viridis_d
 ```
 
 ## Problem 1
-This problem uses the Instacart (dataset_instacart.html) data. 
+This problem uses the instacart data. 
 
 ```{r load_data}
 library(p8105.datasets)
@@ -42,24 +43,20 @@ str(instacart)
 head(instacart)
 summary(instacart)
 ```
-The `instacart` dataset has `r nrow(instacart)` rows and `r ncol(instacart)` columns/variables. Key variables include: order_id, product_id, user_id, days since the last order, product_name, and the department and isle of that product. 
+The `instacart` dataset has **`r nrow(instacart)`** rows and **`r ncol(instacart)`** columns/variables. Key variables include: order_id, product_id, user_id, days since the last order, product_name, and the department and aisle of that product. 
 
-> How many aisles are there, and which aisles are the most items ordered from?
-
+#### How many aisles are there, and which aisles are the most items ordered from?
 ```{r aisles_data, eval=FALSE}
-instacart %>% 
-  distinct(aisle_id) #134 distinct aisle ID's 
-
 aisle_rank =
   instacart %>% 
   janitor::tabyl(aisle) %>% 
   select(aisle, n) %>% 
-  arrange(desc(n)) #134 aisles 
+  arrange(desc(n)) 
 ```
 There are 134 distinct aisles and most items are ordered from the fresh vegetables(150,609), fresh fruits (150,473), and packaged vegetables fruits (78,493) section. 
 
 
-> Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+#### Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered.
 
 ```{r}
 instacart %>% 
@@ -73,10 +70,10 @@ instacart %>%
   geom_bar(stat = "identity") + 
   coord_flip() 
 ```
-From the above plot, we see that most of the items ordered are from the fresh vegetables, fresh fruits, and packaged vegetables fruits aisle. 
+From the above plot, we see that most items ordered are from the fresh vegetables, fresh fruits, and the packaged vegetables fruits aisle. 
 
 
-> Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+#### Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits” (include the number of times each item is ordered).
 
 ```{r popular_item}
 popular_items =
@@ -98,9 +95,9 @@ popular_items
 From the table, we see that the top 3 items ordered from the "baking ingredients" aisle is light brown sugar, pure baking soda, and cane sugar. The top 3 items from the "dog food care" aisle are snack sticks chicken & rice, organic chicken & brown rice, and small dog biscuits. The top 3 items from the "packaged vegetables fruits" aisle are organic baby spinach, organic raspberries, and organic blueberries. 
 
 
-> Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week
+#### Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week.
 
-```{r order_time}
+```{r order_time, message = FALSE}
 order_time =
 instacart %>% 
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>%
@@ -129,7 +126,9 @@ We can see from the table that both pink lady apples and the coffee ice cream ar
 
 
 ## Problem 2
-This problem uses the BRFSS data. Load the data from the `p8105.datasets` package.First, do some data cleaning:
+This problem uses the BRFSS data. Load the data from the `p8105.datasets` package. 
+
+#### First, do some data cleaning:
 
 * format the data to use appropriate variable names  
 * focus on the “Overall Health” topic  
@@ -143,17 +142,13 @@ brfss_df =
   brfss_smart2010 %>% 
   janitor::clean_names() %>%
   filter(topic == "Overall Health") %>% 
-  mutate(response = factor(response))
-
-brfss_df
-  #filter(response %in% c("Poor", "Fair", "Good", "Very good", "Excellent")) 
+  mutate(response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"))) 
 ```
 
 
-> In 2002, which states were observed at 7 or more locations? What about in 2010?
-
+#### In 2002, which states were observed at 7 or more locations? What about in 2010?
 ```{r states}
-#2002 
+#2002
 brfss_df %>%
   filter(year == 2002) %>% 
   rename(state = locationabbr) %>% 
@@ -172,9 +167,9 @@ brfss_df %>%
 In 2002, only **6** states are observed at 7 or more locations (i.e., CT, FL, MA, NC, NJ, PA). By 2010, **14** states are observed at 7 or more locations.
 
 
-> Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. 
+#### Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. 
 
-```{r }
+```{r, message = FALSE}
 new_brfss_df =
 brfss_df %>% 
   filter(response == "Excellent") %>% 
@@ -185,5 +180,81 @@ brfss_df %>%
 
 new_brfss_df
 ```
+This give us the average % of respondents in a state who report having "excellent" general health from 2002 to 2010.
 
-NOTE: this give us the average % of respondents in a state who report having "excellent" general health from 2002 to 2010.
+
+#### Make a “spaghetti” plot of this average value over time within a state (i.e., make a plot showing a line for each state across years).
+```{r, warning = FALSE}
+new_brfss_df %>% 
+  ggplot(aes(x = year, y = mean_value, group = state, colour = state)) +
+  geom_line(size = 1) +
+  theme(legend.position = "right") + 
+  ggtitle("Spaghetti plot for average data value from 2002 - 2010") + 
+  ylab("Average % of population who report excellent overall health") 
+```
+There aren't any obvious trends in the average % of people who report having excellent overall health from 2002 to 2010. The % increases for certain years and decreases for others, also with variations in state.
+
+#### Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
+```{r}
+plot_06 =
+brfss_df %>% 
+  rename(state = locationabbr) %>%
+  filter(state == 'NY', year == 2006) %>% 
+  ggplot(aes(x = response, y = data_value, color = locationdesc)) +
+  geom_point() + 
+  ggtitle("Distribution of data value in 2006")
+
+plot_10 =
+brfss_df %>% 
+  rename(state = locationabbr) %>%
+  filter(state == 'NY', year == 2010) %>% 
+  ggplot(aes(x = response, y = data_value, color = locationdesc)) +
+  geom_point() +
+  ggtitle("Distribution of data value in 2010")
+
+grid.arrange(plot_06, plot_10)
+```
+The distribution of data value for the responses among the locations in NY state stayed relatively the same for 2006 and 2010. Most of the responses (~50%) were "good" or "very good" responses. Note that there are data from three additional counties from NY in 2010, a sign that the BRFSS survey is more prevalent. 
+
+
+## Problem 3
+This problem uses five weeks of accelerometer data collected on a 63 year-old male with BMI 25, who was admitted to the Advanced Cardiac Care Center of Columbia University Medical Center and diagnosed with congestive heart failure (CHF).
+
+#### Load & clean the data
+```{r, message=FALSE}
+accel_data <- read_csv("data/accel_data.csv")
+
+accel_clean = 
+accel_data %>% 
+  janitor::clean_names() %>% 
+  mutate(day_var = ifelse(day %in% c("Satuday", "Sunday"), "weekend", "weekday")) %>% 
+  mutate(day = fct_relevel(day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")))
+```
+The resulting dataset after tidying has **35** rows/observations and **1444** columns. Key variables include the week (out of the 5), the day, activity counts for each minute of that day (24h x 60min/h = 1440 mins), and a variable named `day_var` that indicates whether the day is a weekday or weekend. 
+
+#### Aggregate across minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
+```{r, message=FALSE}
+accel_clean %>% 
+  group_by(day, day_id) %>% 
+  summarize(total_activity = sum(activity_1:activity_1440)) %>% 
+  knitr::kable()
+```
+There does not seem to be any obvious and consistent trends. For instance, the patient is very active on certain Mondays (42,486 activity counts) but not at all on other Mondays(i.e., 1 activity count). Similarly, the patient is active on 3 Sundays out of the 5 but inactive on the other two Sundays. Nonetheless, patient does seem to be the least activity on Saturdays. 
+
+#### Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week
+```{r, message=FALSE}
+accel_clean %>% 
+  pivot_longer(
+  activity_1:activity_1440,
+  names_to = "minute",
+  names_prefix = "activity_",
+  values_to = "activity_count") %>% 
+  mutate(minute = as.numeric(minute)) %>%
+  ggplot(aes(x = minute, y = activity_count, colour = day)) + 
+  geom_smooth(aes(group = day), se = FALSE) +
+  ggtitle("24-hour activity for each day of the week") +
+  xlab("minute") +
+  ylab("activity counts")
+```
+
+The patient's activity gradually increases around the 250th minute and then starts to plateau starting around the 500th minute (~8am) and stays similar till 1000th (~5pm) minute. Then, we see some increase in activities and then a steep drop starting around the 1250th minute (~9pm), which makes logical sense since the patient is likely getting ready for bed. From the plot, we also see that the patient is stays up later then normal on Friday nights and more active on Sunday late mornings/noon. 
